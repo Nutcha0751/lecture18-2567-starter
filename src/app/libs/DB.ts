@@ -17,6 +17,12 @@ export interface Enrollment {
   courseNo: string;
 }
 
+export interface Payload{
+  studentId: string;
+  username: string;
+  role: string;
+}
+
 export let DB = {
   students: [
     {
