@@ -10,23 +10,25 @@ export const GET = async (request: NextRequest) => {
   const rawAuthHeader = headers().get('authorization'); //ถ้าไม่แนบ token จะ error 'authorization'
   //const token = rawAuthHeader?.split(' ')[1]; //แยกส่วนโดยใช้ช่องว่าง split(' ')
 
-  if(!rawAuthHeader || !rawAuthHeader.startsWith('Bearer ')){
+  if(!rawAuthHeader || !rawAuthHeader.startsWith('Bearer ')){ //!rawAuthHeader.startsWith('Bearer ') เป็น string ที่ไม่ได้ขึ้นต้นด้วยคำว่า 'Bearer '
     return NextResponse.json(
       {
         ok: false,
         message: "Missing or invalid Authorization header",
       })
   }
+  //หาเจอหรือมีค่า
   const token = rawAuthHeader?.split(' ')[1];
   //console.log(token);
   const secret = process.env.JWT_SECRET || "This is another secret"
 
   let studentId = null;
-  try{
-    const payload = jwt.verify(token, secret);
+  try{ //จะทดสอบ
+    const payload = jwt.verify(token, secret); //เอา token มา verify (แกะ)
     //console.log(payload); //ใช้ debug
-    studentId = (<Payload>payload).studentId;
-  } catch{
+    //ถ้าแกะ payload ได้
+    studentId = (<Payload>payload).studentId; //(<Payload>payload) กำหนด type ให้ studentId (อยู่ใน DB)
+  } catch{ //เวลาจับได้
     return NextResponse.json(
       {
         ok: false,
@@ -35,8 +37,9 @@ export const GET = async (request: NextRequest) => {
       { status: 401 }
     );
   }
+  //ปล.ใน try ถ้าไมใส่ try ครอบ มีโอกาส error สูง
 
-  //seach in enrollment DB for specific
+  //seach in enrollment DB for specificed "studentId"
   const courseNoList = [];
   for (const enroll of DB.enrollments) {
     if (enroll.studentId === studentId) {
@@ -49,6 +52,11 @@ export const GET = async (request: NextRequest) => {
   });
 };
 
+/*POST 
+1.เช็คว่า user มีอยู่จริงไหม
+2.วิชามีอยู่จริงไหม
+3.เคยมีการลงทะเบียนของ user คนนี้กับวิชานี้มาก่อนไหม ถ้าไม่มีถึงจะลงทะเบียนได้ นอกเหนือจากนั้น return เป็น error message
+*/
 export const POST = async (request: NextRequest) => {
   //extract token from request
   const rawAuthHeader = headers().get('authorization'); //ถ้าไม่แนบ token จะ error 'authorization'
@@ -95,7 +103,7 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
-  //check if courseNo exists
+  //check if courseNo exists วิชานี้มีอยู่จริงไหม
   const foundCourse = DB.courses.find((x) => x.courseNo === courseNo);
   if (!foundCourse) {
     return NextResponse.json(
@@ -107,11 +115,11 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
-  //check if student enrolled that course already
+  //check if student enrolled that course already เคยลงทะเบียนรึยัง
   const foundEnroll = DB.enrollments.find(
     (x) => x.studentId === studentId && x.courseNo === courseNo
   );
-  if (foundEnroll) {
+  if (foundEnroll) { //เจอข้อมูลหรือเคยลงทะเบียนแล้ว
     return NextResponse.json(
       {
         ok: false,
@@ -131,6 +139,7 @@ export const POST = async (request: NextRequest) => {
 
   return NextResponse.json({
     ok: true,
-    message: "You has enrolled a course successfully",
+    message: "You have enrolled a course successfully",
   });
 };
+//middleware ช่วยแก้ปัญหาการเขียนโค้ดซ้ำซ้อนได้
